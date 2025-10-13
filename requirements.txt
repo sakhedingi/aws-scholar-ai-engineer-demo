@@ -1,2 +1,6 @@
+streamlit
 boto3
+pdfminer.six
+langchain
 botocore
+numpy
