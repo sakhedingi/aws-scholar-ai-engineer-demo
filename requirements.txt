@@ -4,3 +4,4 @@ pdfminer.six
 langchain
 botocore
 numpy
+python-docx
