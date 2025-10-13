@@ -37,7 +37,7 @@ if "history" not in st.session_state:
 if mode == "Chat" and not st.session_state.greeting_shown:
     st.session_state.history.append({
     "role": "assistant",
-    "content": "👋 Hello! I'm ready to chat. Ask me anything."
+    "content": "👋 Hello! I'm ready to chat. How ca I help you?."
 })
 st.session_state.greeting_shown = True
 
