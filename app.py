@@ -4,9 +4,9 @@ from bedrock_app.chat import chat_with_bedrock
 from bedrock_app.semantic_search import build_vector_store_from_folder, semantic_search_local
 from bedrock_app.rag import answer_with_context
 
-st.set_page_config(page_title="Sakhe's AI Assistant", layout="wide")
+st.set_page_config(page_title="Sakhe AI Assistant", layout="wide")
 
-st.sidebar.title("🧠 Sakhe's AI Assistant")
+st.sidebar.title("🧠 Sakhe AI Assistant")
 mode = st.sidebar.radio("Choose a mode", ["Chat", "Document Q&A (RAG)"])
 
 chat_models, embedding_models = list_bedrock_models()
@@ -28,7 +28,7 @@ if mode == "Document Q&A (RAG)":
     st.sidebar.markdown(f"**Knowledge Base:** `{kb_folder}`")
     st.session_state.vector_store = build_vector_store_from_folder(kb_folder, embed_model['id'])
 
-st.title("🤖 Sakhe's AI Assistant")
+st.title("🤖 Sakhe AI Assistant")
 
 # Initialize history if not present
 if "history" not in st.session_state:
