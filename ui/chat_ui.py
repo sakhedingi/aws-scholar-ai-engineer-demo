@@ -1,11 +1,11 @@
 from bedrock_app.model_listing import list_bedrock_models
 from bedrock_app.chat import chat_with_bedrock
-from bedrock_app.display_utils import display_models
+from bedrock_app.display_utils import display_chat_models
 
 def run_chat_ui():
     print("\n💬 CHAT MODE SELECTED\n")
     chat_models, _ = list_bedrock_models()
-    display_models(chat_models, [])
+    display_chat_models(chat_models, [])
 
     while True:
         try:

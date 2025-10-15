@@ -3,6 +3,16 @@ from bedrock_app.model_listing import list_bedrock_models
 from bedrock_app.chat import chat_with_bedrock
 from bedrock_app.semantic_search import build_vector_store_from_folder, semantic_search_local
 from bedrock_app.rag import answer_with_context
+import time
+
+def retry_bedrock_call(func, *args, retries=3, delay=1):
+    for attempt in range(retries):
+        try:
+            return func(*args)
+        except Exception as e:
+            print(f"Retry {attempt + 1}/{retries} after error: {e}")
+            time.sleep(delay * (2 ** attempt))
+    return "Bedrock API throttled. Please try again later."
 
 st.set_page_config(page_title="Sakhe AI Assistant", layout="wide")
 
@@ -58,7 +68,9 @@ if user_input:
         results = semantic_search_local(user_input, embed_model['id'], st.session_state.vector_store)
         if results:
             context = "\n\n".join([r[2] for r in results])
-            response = answer_with_context(selected_chat_model['id'], user_input, context, temp_history)
+            response = retry_bedrock_call(answer_with_context, selected_chat_model['id'], user_input, context, temp_history)
+            if response is None or response == "Bedrock API throttled. Please try again later.":
+                response = "I couldn't generate a response right now. Please try again shortly or rephrase your question."
         else:
             response = "No relevant documents found."
 
