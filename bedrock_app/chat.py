@@ -10,14 +10,13 @@ def chat_with_bedrock(model_id, user_message, message_history=None, temperature=
 
         if 'claude' in model_id.lower():
             if 'claude-3' in model_id.lower():
-                message_history.append({"role": "user", "content": user_message})
+                temp_messages = message_history + [{"role": "user", "content": user_message}]
                 body = json.dumps({
                     "anthropic_version": "bedrock-2023-05-31",
                     "max_tokens": 1000,
-                    "messages": message_history,
+                    "messages": temp_messages,
                     "temperature": temperature,
                     "top_p": top_p
-
                 })
             else:
                 body = json.dumps({
