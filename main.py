@@ -16,7 +16,7 @@ vector_store = []
 
 def list_bedrock_models():
     """Lists available chat and embedding models in Amazon Bedrock"""
-    bedrock = boto3.client('bedrock', region_name='us-west-2')
+    bedrock = boto3.client('bedrock', region_name='us-east-1')
     try:
         response = bedrock.list_foundation_models()
         models = response.get('modelSummaries', [])
@@ -68,7 +68,7 @@ def list_bedrock_models():
 # ─────────────────────────────────────────────────────────────
 
 def chat_with_bedrock(model_id, user_message):
-    bedrock_runtime = boto3.client('bedrock-runtime', region_name='us-west-2')
+    bedrock_runtime = boto3.client('bedrock-runtime', region_name='us-east-1')
     try:
         if 'claude' in model_id.lower():
             if 'claude-3' in model_id.lower():
@@ -134,7 +134,7 @@ def chat_with_bedrock(model_id, user_message):
 # ─────────────────────────────────────────────────────────────
 
 def embed_with_bedrock(model_id, input_text):
-    bedrock_runtime = boto3.client('bedrock-runtime', region_name='us-west-2')
+    bedrock_runtime = boto3.client('bedrock-runtime', region_name='us-east-1')
     try:
         body = json.dumps({"inputText": input_text})
         response = bedrock_runtime.invoke_model(
@@ -224,7 +224,7 @@ def semantic_search_local(query_text, embed_model_id, store, top_k=3):
 
 def answer_with_context(model_id, user_question, retrieved_text):
     """Uses a chat model to answer a question using retrieved context"""
-    bedrock_runtime = boto3.client('bedrock-runtime', region_name='us-west-2')
+    bedrock_runtime = boto3.client('bedrock-runtime', region_name='us-east-1')
 
     if 'claude' in model_id.lower():
         if 'claude-3' in model_id.lower() or 'claude-3-5' in model_id.lower():
