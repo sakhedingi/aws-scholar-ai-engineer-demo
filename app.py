@@ -28,9 +28,6 @@ st.sidebar.markdown("### 🔧 Model Parameters")
 temperature = st.sidebar.slider("Temperature", min_value=0.0, max_value=1.0, value=0.7, step=0.05)
 top_p = st.sidebar.slider("Top-p (nucleus sampling)", min_value=0.0, max_value=1.0, value=0.9, step=0.05)
 
-if "greeting_shown" not in st.session_state:
-    st.session_state.greeting_shown = False
-
 if mode == "Document Q&A (RAG)":
     embed_model = embedding_models[0]
     st.sidebar.markdown(f"**Embedding Model:** {embed_model['name']}")
@@ -41,15 +38,27 @@ if mode == "Document Q&A (RAG)":
 st.title("🤖 Sakhe AI Assistant")
 
 # Initialize history if not present
-if "history" not in st.session_state:
-    st.session_state.history = []
+if "mode_histories" not in st.session_state:
+    st.session_state.mode_histories = {
+        "Chat": [],
+        "Document Q&A (RAG)": []
+    }
 
-if mode == "Chat" and not st.session_state.greeting_shown:
-    st.session_state.history.append({
-    "role": "assistant",
-    "content": "👋 Hello! I'm ready to chat. How can I help you?"
-})
-st.session_state.greeting_shown = True
+if "last_greeted_mode" not in st.session_state:
+    st.session_state.last_greeted_mode = None
+
+# Mode-specific greeting logic
+if "greeting_shown" not in st.session_state:
+    st.session_state.greeting_shown = {"Chat": False, "Document Q&A (RAG)": False}
+
+if not st.session_state.greeting_shown[mode]:
+    greeting = (
+        "👋 Hello! I'm ready to chat. How can I help you?"
+        if mode == "Chat"
+        else "📚 Ready to answer questions from your knowledge base. Ask me anything based on your documents!"
+    )
+    st.session_state.mode_histories[mode].append({"role": "assistant", "content": greeting})
+    st.session_state.greeting_shown[mode] = True
 
 # Create a placeholder container to suppress default rendering
 chat_container = st.container()
@@ -59,8 +68,10 @@ user_input = st.chat_input("Ask a question...")
 
 # Only generate response if there's new input
 if user_input:
+    current_history = st.session_state.mode_histories[mode]
     # Temporarily extend history for context
-    temp_history = st.session_state.history + [{"role": "user", "content": user_input}]
+    current_history = st.session_state.mode_histories[mode]
+    temp_history = current_history + [{"role": "user", "content": user_input}]
 
     if mode == "Chat":
         response = chat_with_bedrock(selected_chat_model['id'], user_input, temp_history)
@@ -75,11 +86,11 @@ if user_input:
             response = "No relevant documents found."
 
     # Append both messages to history
-    st.session_state.history.append({"role": "user", "content": user_input})
-    st.session_state.history.append({"role": "assistant", "content": response})
+    current_history.append({"role": "user", "content": user_input})
+    current_history.append({"role": "assistant", "content": response})
 
 # Render full history
 with chat_container:
-    for msg in st.session_state.history:
+    for msg in st.session_state.mode_histories[mode]:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
