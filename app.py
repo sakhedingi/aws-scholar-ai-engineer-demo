@@ -5,17 +5,23 @@ from bedrock_app.semantic_search import build_vector_store_from_folder, semantic
 from bedrock_app.rag import answer_with_context
 import time
 
-def retry_bedrock_call(func, *args, retries=4, delay=2):
-    for attempt in range(retries):
+import time
+import random
+
+def retry_bedrock_call(func, *args, retries=5, base_delay=1, max_delay=15):
+    for attempt in range(1, retries + 1):
         try:
             return func(*args)
         except Exception as e:
-            if "Throttling" in str(e) or "Rate exceeded" in str(e):
-                wait = delay * (2 ** attempt)
-                print(f"⏳ Throttled. Waiting {wait}s before retry {attempt+1}/{retries}")
-                time.sleep(wait)
+            err = str(e)
+            if "Throttling" in err or "Rate exceeded" in err:
+                # Exponential backoff + jitter (recommended by AWS)
+                sleep_time = min(base_delay * (2 ** (attempt - 1)), max_delay)
+                sleep_time += random.uniform(0, 0.5)
+                print(f"⏳ Throttled by Bedrock. Waiting {sleep_time:.2f}s (attempt {attempt}/{retries})...")
+                time.sleep(sleep_time)
             else:
-                print(f"⚠️ Error: {e}")
+                print(f"⚠️ Unexpected error: {e}")
                 time.sleep(1)
     return "Bedrock API throttled. Please try again later."
 
