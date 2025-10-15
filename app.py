@@ -5,13 +5,18 @@ from bedrock_app.semantic_search import build_vector_store_from_folder, semantic
 from bedrock_app.rag import answer_with_context
 import time
 
-def retry_bedrock_call(func, *args, retries=3, delay=1):
+def retry_bedrock_call(func, *args, retries=4, delay=2):
     for attempt in range(retries):
         try:
             return func(*args)
         except Exception as e:
-            print(f"Retry {attempt + 1}/{retries} after error: {e}")
-            time.sleep(delay * (2 ** attempt))
+            if "Throttling" in str(e) or "Rate exceeded" in str(e):
+                wait = delay * (2 ** attempt)
+                print(f"⏳ Throttled. Waiting {wait}s before retry {attempt+1}/{retries}")
+                time.sleep(wait)
+            else:
+                print(f"⚠️ Error: {e}")
+                time.sleep(1)
     return "Bedrock API throttled. Please try again later."
 
 st.set_page_config(page_title="Sakhe AI Assistant", layout="wide")
@@ -74,6 +79,7 @@ if user_input:
 
     if mode == "Chat":
         response = retry_bedrock_call(chat_with_bedrock, selected_chat_model['id'], user_input, temp_history)
+        time.sleep(1.5)
     else:
         results = semantic_search_local(user_input, embed_model['id'], st.session_state.vector_store)
         if results:
