@@ -70,11 +70,10 @@ user_input = st.chat_input("Ask a question...")
 if user_input:
     current_history = st.session_state.mode_histories[mode]
     # Temporarily extend history for context
-    current_history = st.session_state.mode_histories[mode]
     temp_history = current_history + [{"role": "user", "content": user_input}]
 
     if mode == "Chat":
-        response = chat_with_bedrock(selected_chat_model['id'], user_input, temp_history)
+        response = retry_bedrock_call(chat_with_bedrock, selected_chat_model['id'], user_input, temp_history)
     else:
         results = semantic_search_local(user_input, embed_model['id'], st.session_state.vector_store)
         if results:
