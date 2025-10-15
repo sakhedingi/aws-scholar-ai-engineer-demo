@@ -25,7 +25,7 @@ def list_bedrock_models():
                 if 'ON_DEMAND' in inference_types or not inference_types:
                     chat_models.append({'id': model_id, 'name': model_name, 'provider': provider})
 
-            if 'embed' in model_id.lower() and 'ON_DEMAND' in inference_types:
+            if 'embed' in model_id.lower() and 'ON_DEMAND' in inference_types and 'v2' in model_id.lower():
                 embedding_models.append({'id': model_id, 'name': model_name, 'provider': provider})
 
         return chat_models, embedding_models
