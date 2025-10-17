@@ -26,34 +26,32 @@ def retry_bedrock_call(func, *args, retries=5, base_delay=1, max_delay=15):
                 time.sleep(1)
     return "Bedrock API throttled. Please try again later."
 
-st.set_page_config(page_title="Sakhe AI Assistant", layout="wide")
+st.set_page_config(page_title="AI Chat Assistant", layout="wide")
 
-st.sidebar.title("🧠 Sakhe AI Assistant")
-mode = st.sidebar.radio("Choose a mode", ["Chat", "Document Q&A (RAG)"])
-
+st.sidebar.title("🧠 AI Chat Assistant")
+mode = st.sidebar.radio("Select Assistant Mode", ["Conversational Mode or RAG", "Intelligent Document Querying Mode (RAG)"])
 chat_models, embedding_models = list_bedrock_models()
 chat_model_names = [m['name'] for m in chat_models]
-selected_chat_name = st.sidebar.selectbox("Select Chat Model", chat_model_names)
+selected_chat_name = st.sidebar.selectbox("Choose AI Model", chat_model_names)
 selected_chat_model = next(m for m in chat_models if m['name'] == selected_chat_name)
-
-st.sidebar.markdown("### 🔧 Model Parameters")
+st.sidebar.markdown("### 🔧 Model Behavior Settings")
 temperature = st.sidebar.slider("Temperature", min_value=0.0, max_value=1.0, value=0.7, step=0.05)
 top_p = st.sidebar.slider("Top-p (nucleus sampling)", min_value=0.0, max_value=1.0, value=0.9, step=0.05)
 
-if mode == "Document Q&A (RAG)":
+if mode == "Intelligent Document Querying Mode (RAG)":
     embed_model = embedding_models[0]
     st.sidebar.markdown(f"**Embedding Model:** {embed_model['name']}")
     kb_folder = "./knowledge_base"
     st.sidebar.markdown(f"**Knowledge Base:** `{kb_folder}`")
     st.session_state.vector_store = build_vector_store_from_folder(kb_folder, embed_model['id'])
 
-st.title("🤖 Sakhe AI Assistant")
+st.title("🤖 AI Chat Assistant")
 
 # Initialize history if not present
 if "mode_histories" not in st.session_state:
     st.session_state.mode_histories = {
-        "Chat": [],
-        "Document Q&A (RAG)": []
+        "Conversational Mode or RAG": [],
+        "Intelligent Document Querying Mode (RAG)": []
     }
 
 if "last_greeted_mode" not in st.session_state:
@@ -61,12 +59,12 @@ if "last_greeted_mode" not in st.session_state:
 
 # Mode-specific greeting logic
 if "greeting_shown" not in st.session_state:
-    st.session_state.greeting_shown = {"Chat": False, "Document Q&A (RAG)": False}
+    st.session_state.greeting_shown = {"Conversational Mode or RAG": False, "Intelligent Document Querying Mode (RAG)": False}
 
 if not st.session_state.greeting_shown[mode]:
     greeting = (
         "👋 Hello! I'm ready to chat. How can I help you?"
-        if mode == "Chat"
+        if mode == "Conversational Mode or RAG"
         else "📚 Ready to answer questions from your knowledge base. Ask me anything based on your documents!"
     )
     st.session_state.mode_histories[mode].append({"role": "assistant", "content": greeting})
@@ -78,8 +76,8 @@ chat_container = st.container()
 # Capture user input
 user_input = st.chat_input("Ask a question...")
 
-if mode == "Chat":
-    uploaded_file = st.sidebar.file_uploader("Upload a document for Q&A", type=["pdf", "txt", "docx"])
+if mode == "Conversational Mode or RAG":
+    uploaded_file = st.sidebar.file_uploader("Drop Your File Here", type=["pdf", "txt", "docx"])
     if uploaded_file:
         # st.sidebar.success(f"Uploaded: {uploaded_file.name}")
         # Save uploaded file temporarily
@@ -96,7 +94,7 @@ if user_input:
     # Temporarily extend history for context
     temp_history = current_history + [{"role": "user", "content": user_input}]
 
-    if mode == "Chat":
+    if mode == "Conversational Mode or RAG":
         if uploaded_file:
 
             results = semantic_search_local(user_input, embed_model['id'], st.session_state.temp_vector_store)
