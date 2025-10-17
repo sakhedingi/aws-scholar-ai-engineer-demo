@@ -1,4 +1,3 @@
-import os
 import streamlit as st
 from bedrock_app.model_listing import list_bedrock_models
 from bedrock_app.chat import chat_with_bedrock
@@ -6,6 +5,7 @@ from bedrock_app.semantic_search import build_vector_store_from_folder, semantic
 from bedrock_app.rag import answer_with_context
 import time
 import random
+import os
 
 os.makedirs("./temp_docs", exist_ok=True)
 
@@ -22,7 +22,7 @@ def retry_bedrock_call(func, *args, retries=5, base_delay=1, max_delay=15):
                 print(f"⏳ Throttled by Bedrock. Waiting {sleep_time:.2f}s (attempt {attempt}/{retries})...")
                 time.sleep(sleep_time)
             else:
-                print(f"Unexpected error: {e}")
+                print(f"⚠️ Unexpected error: {e}")
                 time.sleep(1)
     return "Bedrock API throttled. Please try again later."
 
@@ -64,6 +64,17 @@ if "greeting_shown" not in st.session_state:
     st.session_state.greeting_shown = {"Chat": False, "Document Q&A (RAG)": False}
 
 if not st.session_state.greeting_shown[mode]:
+    uploaded_file = st.sidebar.file_uploader("Upload a document for Q&A", type=["pdf", "txt", "docx"])
+
+if uploaded_file:
+    st.sidebar.success(f"Uploaded: {uploaded_file.name}")
+    # Save uploaded file temporarily
+    temp_path = f"./temp_docs/{uploaded_file.name}"
+    with open(temp_path, "wb") as f:
+        f.write(uploaded_file.getbuffer())
+    # Build vector store from uploaded document
+    embed_model = embedding_models[0]
+    st.session_state.temp_vector_store = build_vector_store_from_folder("./temp_docs", embed_model['id'])
     greeting = (
         "👋 Hello! I'm ready to chat. How can I help you?"
         if mode == "Chat"
@@ -84,41 +95,16 @@ if user_input:
     # Temporarily extend history for context
     temp_history = current_history + [{"role": "user", "content": user_input}]
 
-    if mode == "Chat":
-        uploaded_file = st.sidebar.file_uploader("Upload a document for Q&A", type=["pdf", "txt", "docx"])
-        
-        if uploaded_file:
-            st.sidebar.success(f"Uploaded: {uploaded_file.name}")
-            # Save uploaded file temporarily
-            temp_path = f"./temp_docs/{uploaded_file.name}"
-            with open(temp_path, "wb") as f:
-                f.write(uploaded_file.getbuffer())
-            # Build vector store from uploaded document
-            embed_model = embedding_models[0]
-            st.session_state.temp_vector_store = build_vector_store_from_folder("./temp_docs", embed_model['id'])
-        else:
-            response = chat_with_bedrock(selected_chat_model['id'], user_input, temp_history)
-            time.sleep(1.5)  
-
-        if uploaded_file and "temp_vector_store" in st.session_state:
-                results = semantic_search_local(user_input, embed_model['id'], st.session_state.temp_vector_store)
-                if results:
-                    context = "\n\n".join([r[2] for r in results])
-                    response = answer_with_context(selected_chat_model['id'], user_input, context, temp_history)
-                else:
-                    response = "No relevant information found in the uploaded document."
-        else:
-            response = chat_with_bedrock(selected_chat_model['id'], user_input, temp_history)
-            time.sleep(1.5)
-    else:
-        results = semantic_search_local(user_input, embed_model['id'], st.session_state.vector_store)
+if mode == "Chat":
+    if uploaded_file and "temp_vector_store" in st.session_state:
+        results = semantic_search_local(user_input, embed_model['id'], st.session_state.temp_vector_store)
         if results:
             context = "\n\n".join([r[2] for r in results])
-            response = retry_bedrock_call(answer_with_context, selected_chat_model['id'], user_input, context, temp_history)
-            if response is None or response == "Bedrock API throttled. Please try again later.":
-                response = "I couldn't generate a response right now. Please try again shortly or rephrase your question."
+            response = answer_with_context(selected_chat_model['id'], user_input, context, temp_history)
         else:
-            response = "No relevant documents found."
+            response = "No relevant information found in the uploaded document."
+    else:
+        response = chat_with_bedrock(selected_chat_model['id'], user_input, temp_history)
 
     # Append both messages to history
     current_history.append({"role": "user", "content": user_input})
