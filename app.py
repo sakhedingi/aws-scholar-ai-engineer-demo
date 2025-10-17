@@ -79,7 +79,7 @@ chat_container = st.container()
 user_input = st.chat_input("Ask a question...")
 
 if mode == "Chat":
-    uploaded_file = st.sidebar.success.file_uploader("Upload a document for Q&A", type=["pdf", "txt", "docx"])
+    uploaded_file = st.sidebar.file_uploader("Upload a document for Q&A", type=["pdf", "txt", "docx"])
     if uploaded_file:
         # st.sidebar.success(f"Uploaded: {uploaded_file.name}")
         # Save uploaded file temporarily
