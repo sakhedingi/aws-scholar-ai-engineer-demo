@@ -88,7 +88,7 @@ if uploaded_file:
         f.write(uploaded_file.getbuffer())
     # Build vector store from uploaded document
     embed_model = embedding_models[0]
-    st.session_state.temp_vector_store = build_vector_store_from_folder("./temp_docs", embed_model['id'])
+    
 
 # Only generate response if there's new input
 if user_input:
@@ -98,7 +98,7 @@ if user_input:
 
     if mode == "Chat":
         if uploaded_file:
-
+            st.session_state.temp_vector_store = build_vector_store_from_folder("./temp_docs", embed_model['id'])
             results = semantic_search_local(user_input, embed_model['id'], st.session_state.vector_store)
             if results:
                 context = "\n\n".join([r[2] for r in results])
