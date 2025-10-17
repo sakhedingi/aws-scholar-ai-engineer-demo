@@ -75,24 +75,26 @@ chat_container = st.container()
 # Capture user input
 user_input = st.chat_input("Ask a question...")
 
+uploaded_file = st.sidebar.file_uploader("Upload a document for Q&A", type=["pdf", "txt", "docx"])
+
+st.sidebar.success(f"Uploaded: {uploaded_file.name}")
+ # Save uploaded file temporarily
+temp_path = f"./temp_docs/{uploaded_file.name}"
+with open(temp_path, "wb") as f:
+    f.write(uploaded_file.getbuffer())
+# Build vector store from uploaded document
+embed_model = embedding_models[0]
+st.session_state.temp_vector_store = build_vector_store_from_folder("./temp_docs", embed_model['id'])
+
 # Only generate response if there's new input
 if user_input:
     current_history = st.session_state.mode_histories[mode]
     # Temporarily extend history for context
     temp_history = current_history + [{"role": "user", "content": user_input}]
 
-    uploaded_file = st.sidebar.file_uploader("Upload a document for Q&A", type=["pdf", "txt", "docx"])
-
     if mode == "Chat":
         if uploaded_file:
-            st.sidebar.success(f"Uploaded: {uploaded_file.name}")
-            # Save uploaded file temporarily
-            temp_path = f"./temp_docs/{uploaded_file.name}"
-            with open(temp_path, "wb") as f:
-                f.write(uploaded_file.getbuffer())
-            # Build vector store from uploaded document
-            embed_model = embedding_models[0]
-            st.session_state.temp_vector_store = build_vector_store_from_folder("./temp_docs", embed_model['id'])
+
             results = semantic_search_local(user_input, embed_model['id'], st.session_state.vector_store)
             if results:
                 context = "\n\n".join([r[2] for r in results])
