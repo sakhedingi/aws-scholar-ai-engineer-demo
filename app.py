@@ -92,24 +92,32 @@ user_input = st.chat_input("Ask a question...")
 # Only generate response if there's new input
 if user_input:
     current_history = st.session_state.mode_histories[mode]
-    # Temporarily extend history for context
     temp_history = current_history + [{"role": "user", "content": user_input}]
 
-if mode == "Chat":
-    if uploaded_file and "temp_vector_store" in st.session_state:
-        results = semantic_search_local(user_input, embed_model['id'], st.session_state.temp_vector_store)
+    if mode == "Chat":
+        if uploaded_file and "temp_vector_store" in st.session_state:
+            results = semantic_search_local(user_input, embed_model['id'], st.session_state.temp_vector_store)
+            if results:
+                context = "\n\n".join([r[2] for r in results])
+                response = answer_with_context(selected_chat_model['id'], user_input, context, temp_history)
+            else:
+                response = "No relevant information found in the uploaded document."
+        else:
+            response = chat_with_bedrock(selected_chat_model['id'], user_input, temp_history)
+
+    elif mode == "Document Q&A (RAG)":
+        results = semantic_search_local(user_input, embed_model['id'], st.session_state.vector_store)
         if results:
             context = "\n\n".join([r[2] for r in results])
-            response = answer_with_context(selected_chat_model['id'], user_input, context, temp_history)
+            response = retry_bedrock_call(answer_with_context, selected_chat_model['id'], user_input, context, temp_history)
+            if response is None or response == "Bedrock API throttled. Please try again later.":
+                response = "I couldn't generate a response right now. Please try again shortly or rephrase your question."
         else:
-            response = "No relevant information found in the uploaded document."
-    else:
-        response = chat_with_bedrock(selected_chat_model['id'], user_input, temp_history)
+            response = "No relevant documents found."
 
     # Append both messages to history
     current_history.append({"role": "user", "content": user_input})
     current_history.append({"role": "assistant", "content": response})
-
 # Render full history
 with chat_container:
     for msg in st.session_state.mode_histories[mode]:
