@@ -83,7 +83,7 @@ if mode == "Conversational Mode or RAG":
         # Save uploaded file temporarily
         temp_path = f"./temp_docs/{uploaded_file.name}"
         with open(temp_path, "wb") as f:
-            f.write(f"Uploaded File: {uploaded_file.name}\n".encode())
+            print(f"Uploaded File: {uploaded_file.name}")
             f.write(uploaded_file.getbuffer())
         # Build vector store from uploaded document
         embed_model = embedding_models[0]
