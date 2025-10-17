@@ -66,22 +66,23 @@ if "greeting_shown" not in st.session_state:
 if not st.session_state.greeting_shown[mode]:
     uploaded_file = st.sidebar.file_uploader("Upload a document for Q&A", type=["pdf", "txt", "docx"])
 
-if uploaded_file:
-    st.sidebar.success(f"Uploaded: {uploaded_file.name}")
-    # Save uploaded file temporarily
-    temp_path = f"./temp_docs/{uploaded_file.name}"
-    with open(temp_path, "wb") as f:
-        f.write(uploaded_file.getbuffer())
-    # Build vector store from uploaded document
-    embed_model = embedding_models[0]
-    st.session_state.temp_vector_store = build_vector_store_from_folder("./temp_docs", embed_model['id'])
-    greeting = (
-        "👋 Hello! I'm ready to chat. How can I help you?"
-        if mode == "Chat"
-        else "📚 Ready to answer questions from your knowledge base. Ask me anything based on your documents!"
-    )
-    st.session_state.mode_histories[mode].append({"role": "assistant", "content": greeting})
-    st.session_state.greeting_shown[mode] = True
+    if uploaded_file:
+        greeting = (
+            "👋 Hello! I'm ready to chat. How can I help you?"
+            if mode == "Chat"
+            else "📚 Ready to answer questions from your knowledge base. Ask me anything based on your documents!"
+        )
+        st.session_state.mode_histories[mode].append({"role": "assistant", "content": greeting})
+        st.session_state.greeting_shown[mode] = True
+
+        st.sidebar.success(f"Uploaded: {uploaded_file.name}")
+        # Save uploaded file temporarily
+        temp_path = f"./temp_docs/{uploaded_file.name}"
+        with open(temp_path, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+        # Build vector store from uploaded document
+        embed_model = embedding_models[0]
+        st.session_state.temp_vector_store = build_vector_store_from_folder("./temp_docs", embed_model['id'])
 
 # Create a placeholder container to suppress default rendering
 chat_container = st.container()
