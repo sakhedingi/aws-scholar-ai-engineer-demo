@@ -5,6 +5,9 @@ from bedrock_app.semantic_search import build_vector_store_from_folder, semantic
 from bedrock_app.rag import answer_with_context
 import time
 import random
+import os
+
+os.makedirs("./temp_docs", exist_ok=True)
 
 def retry_bedrock_call(func, *args, retries=5, base_delay=1, max_delay=15):
     for attempt in range(1, retries + 1):
