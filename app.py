@@ -3,6 +3,7 @@ from bedrock_app.model_listing import list_bedrock_models
 from bedrock_app.chat import chat_with_bedrock
 from bedrock_app.semantic_search import build_vector_store_from_folder, semantic_search_local
 from bedrock_app.rag import answer_with_context
+from bedrock_app.octane import fetch_octane_requirements
 import time
 import random
 import os
@@ -42,6 +43,7 @@ if mode == "Intelligent Document Querying Mode (RAG)":
     embed_model = embedding_models[0]
     st.sidebar.markdown(f"**Embedding Model:** {embed_model['name']}")
     kb_folder = "./knowledge_base"
+    fetch_octane_requirements()
     st.sidebar.markdown(f"**Knowledge Base:** `{kb_folder}`")
     st.session_state.vector_store = build_vector_store_from_folder(kb_folder, embed_model['id'])
 
