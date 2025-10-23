@@ -26,9 +26,9 @@ def retry_bedrock_call(func, *args, retries=5, base_delay=1, max_delay=15):
                 time.sleep(1)
     return "Bedrock API throttled. Please try again later."
 
-st.set_page_config(page_title="AI Chat Assistant", layout="wide")
+st.set_page_config(page_title="SDQA AI Assistant", layout="wide")
 
-st.sidebar.title("🧠 AI Chat Assistant")
+st.sidebar.title("🧠 SDQA AI Assistant")
 mode = st.sidebar.radio("Select Assistant Mode", ["Conversational Mode or RAG", "Intelligent Document Querying Mode (RAG)"])
 chat_models, embedding_models = list_bedrock_models()
 for chat_model in chat_models:
@@ -50,7 +50,7 @@ if mode == "Intelligent Document Querying Mode (RAG)":
     st.sidebar.markdown(f"**Knowledge Base:** `{kb_folder}`")
     st.session_state.vector_store = build_vector_store_from_folder(kb_folder, embed_model['id'])
 
-st.title("🤖 AI Chat Assistant")
+st.title("🤖 SDQA AI Assistant")
 
 # Initialize history if not present
 if "mode_histories" not in st.session_state:
