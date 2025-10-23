@@ -3,7 +3,6 @@ from bedrock_app.model_listing import list_bedrock_models
 from bedrock_app.chat import chat_with_bedrock
 from bedrock_app.semantic_search import build_vector_store_from_folder, semantic_search_local
 from bedrock_app.rag import answer_with_context
-from bedrock_app.octane import fetch_octane_requirements
 import time
 import random
 import os
@@ -33,7 +32,7 @@ st.sidebar.title("🧠 AI Chat Assistant")
 mode = st.sidebar.radio("Select Assistant Mode", ["Conversational Mode or RAG", "Intelligent Document Querying Mode (RAG)"])
 chat_models, embedding_models = list_bedrock_models()
 chat_model_names = [m['name'] for m in chat_models]
-selected_chat_name = st.sidebar.selectbox("Choose AI Model", chat_model_names)
+selected_chat_name = st.sidebar.selectbox("Choose AI Model", "Claude 3.5 Sonnet" in chat_model_names)
 selected_chat_model = next(m for m in chat_models if m['name'] == selected_chat_name)
 st.sidebar.markdown("### 🔧 Model Behavior Settings")
 temperature = st.sidebar.slider("Temperature", min_value=0.0, max_value=1.0, value=0.7, step=0.05)
@@ -43,7 +42,6 @@ if mode == "Intelligent Document Querying Mode (RAG)":
     embed_model = embedding_models[0]
     st.sidebar.markdown(f"**Embedding Model:** {embed_model['name']}")
     kb_folder = "./knowledge_base"
-    fetch_octane_requirements()
     st.sidebar.markdown(f"**Knowledge Base:** `{kb_folder}`")
     st.session_state.vector_store = build_vector_store_from_folder(kb_folder, embed_model['id'])
 
