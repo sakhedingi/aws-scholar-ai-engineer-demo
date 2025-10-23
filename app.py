@@ -37,7 +37,7 @@ for chat_model in chat_models:
         selected_chat_model = chat_model
         break
 chat_model_names = [m['name'] for m in chat_models]
-selected_chat_name = st.sidebar.selectbox("Choose AI Model", chat_model_names)
+selected_chat_name = st.sidebar.selectbox("Choose AI Model", selected_chat_name)
 selected_chat_model = next(m for m in chat_models if m['name'] == selected_chat_name)
 st.sidebar.markdown("### 🔧 Model Behavior Settings")
 temperature = st.sidebar.slider("Temperature", min_value=0.0, max_value=1.0, value=0.7, step=0.05)
