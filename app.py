@@ -31,8 +31,13 @@ st.set_page_config(page_title="AI Chat Assistant", layout="wide")
 st.sidebar.title("🧠 AI Chat Assistant")
 mode = st.sidebar.radio("Select Assistant Mode", ["Conversational Mode or RAG", "Intelligent Document Querying Mode (RAG)"])
 chat_models, embedding_models = list_bedrock_models()
+for chat_model in chat_models:
+    if "Claude 3.5 Sonnet" in chat_model['name']:
+        selected_chat_name = "Claude 3.5 Sonnet"
+        selected_chat_model = chat_model
+        break
 chat_model_names = [m['name'] for m in chat_models]
-selected_chat_name = st.sidebar.selectbox("Choose AI Model", "Claude 3.5 Sonnet" in chat_model_names)
+selected_chat_name = st.sidebar.selectbox("Choose AI Model", chat_model_names)
 selected_chat_model = next(m for m in chat_models if m['name'] == selected_chat_name)
 st.sidebar.markdown("### 🔧 Model Behavior Settings")
 temperature = st.sidebar.slider("Temperature", min_value=0.0, max_value=1.0, value=0.7, step=0.05)
