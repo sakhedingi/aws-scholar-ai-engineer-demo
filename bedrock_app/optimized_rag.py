@@ -9,6 +9,7 @@ from .bedrock_runtime import get_bedrock_runtime
 from .vector_store_manager import VectorStoreManager
 from .prompt_cache import PromptCache
 from .context_memory import ContextMemoryStore
+from .system_prompt import load_system_prompt
 
 class OptimizedRAG:
     """Integrated RAG system with vectorization, caching, and memory"""
@@ -146,6 +147,7 @@ class OptimizedRAG:
         
         try:
             if 'claude' in model_id.lower():
+                system_prompt = load_system_prompt()
                 if 'claude-3' in model_id.lower() or 'claude-3-5' in model_id.lower():
                     prompt_text = f"Context:\n{context}\n\nQuestion:\n{user_question}"
                     message_history.append({
@@ -156,12 +158,13 @@ class OptimizedRAG:
                         "anthropic_version": "bedrock-2023-05-31",
                         "max_tokens": 1000,
                         "messages": message_history,
+                        "system": system_prompt,
                         "temperature": temperature
                     })
                 else:
                     prompt_text = f"Context:\n{context}\n\nQuestion:\n{user_question}"
                     body = json.dumps({
-                        "prompt": f"\n\nHuman: {prompt_text}\n\nAssistant:",
+                        "prompt": f"{system_prompt}\n\nHuman: {prompt_text}\n\nAssistant:",
                         "max_tokens_to_sample": 1000,
                         "temperature": temperature
                     })
@@ -362,6 +365,7 @@ class OptimizedRAG:
         from .chat import invoke_model_stream
         
         bedrock_runtime = get_bedrock_runtime()
+        system_prompt = load_system_prompt()
         
         if message_history is None:
             message_history = []
@@ -379,12 +383,13 @@ class OptimizedRAG:
                         "anthropic_version": "bedrock-2023-05-31",
                         "max_tokens": 1000,
                         "messages": temp_messages,
+                        "system": system_prompt,
                         "temperature": temperature
                     }
                 else:
                     prompt_text = f"Context:\n{context}\n\nQuestion:\n{user_question}"
                     body_dict = {
-                        "prompt": f"\n\nHuman: {prompt_text}\n\nAssistant:",
+                        "prompt": f"{system_prompt}\n\nHuman: {prompt_text}\n\nAssistant:",
                         "max_tokens_to_sample": 1000,
                         "temperature": temperature
                     }
