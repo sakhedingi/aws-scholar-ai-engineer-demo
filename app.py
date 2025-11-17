@@ -1,9 +1,10 @@
 import streamlit as st
 from bedrock_app.model_listing import list_bedrock_models
-from bedrock_app.chat import chat_with_bedrock
+from bedrock_app.chat import chat_with_bedrock, chat_stream
 from bedrock_app.semantic_search import build_vector_store_from_folder, semantic_search_local
-from bedrock_app.rag import answer_with_context
+from bedrock_app.rag import answer_with_context, answer_with_context_stream
 from bedrock_app.optimized_rag import OptimizedRAG
+from bedrock_app.prompt_cache import PromptCache
 import time
 import random
 import os
@@ -15,6 +16,10 @@ os.makedirs("./temp_docs", exist_ok=True)
 def get_optimized_rag():
     return OptimizedRAG()
 
+
+@st.cache_resource
+def get_prompt_cache():
+    return PromptCache()
 def retry_bedrock_call(func, *args, retries=5, base_delay=1, max_delay=15):
     for attempt in range(1, retries + 1):
         try:
@@ -78,6 +83,13 @@ if "mode_histories" not in st.session_state:
         "Intelligent Document Querying Mode (RAG)": []
     }
 
+# Track how many messages have been rendered for each mode to avoid duplicates
+if "rendered_counts" not in st.session_state:
+    st.session_state.rendered_counts = {
+        "Conversational Mode or RAG": 0,
+        "Intelligent Document Querying Mode (RAG)": 0
+    }
+
 if "last_greeted_mode" not in st.session_state:
     st.session_state.last_greeted_mode = None
 
@@ -93,12 +105,27 @@ if not st.session_state.greeting_shown[mode]:
     )
     st.session_state.mode_histories[mode].append({"role": "assistant", "content": greeting})
     st.session_state.greeting_shown[mode] = True
+    # Mark greeting as already rendered so top renderer shows it
+    st.session_state.rendered_counts[mode] = len(st.session_state.mode_histories[mode])
 
-# Render chat history BEFORE capturing input
-with st.container():
-    for msg in st.session_state.mode_histories[mode]:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
+# Single chat container and placeholders for messages
+chat_container = st.container()
+
+# Render full chat history into placeholders so streaming can update the last assistant message
+def render_history_into_placeholders(container, history):
+    placeholders = []
+    for msg in history:
+        ph = container.empty()
+        with ph.container():
+            with st.chat_message(msg["role"]):
+                cp = st.empty()
+                # render the static content for now
+                cp.markdown(msg["content"])
+                placeholders.append(cp)
+    return placeholders
+
+# Render existing history and keep placeholders for runtime updates
+placeholders = render_history_into_placeholders(chat_container, st.session_state.mode_histories[mode])
 
 # Capture user input
 user_input = st.chat_input("Ask a question...")
@@ -121,31 +148,152 @@ if user_input:
     current_history = st.session_state.mode_histories[mode]
     # Temporarily extend history for context
     temp_history = current_history + [{"role": "user", "content": user_input}]
+    skip_generic_append = False
 
     if mode == "Conversational Mode or RAG":
         if uploaded_file:
 
             results = semantic_search_local(user_input, embed_model['id'], st.session_state.temp_vector_store)
             if results:
+                # Stream conversational response using retrieved context
                 context = "\n\n".join([r[2] for r in results])
-                response = retry_bedrock_call(answer_with_context, selected_chat_model['id'], user_input, context, temp_history)
-                if response is None or response == "Bedrock API throttled. Please try again later.":
-                    response = "I couldn't generate a response right now. Please try again shortly or rephrase your question."
+
+                # Initialize prompt cache and ensure context chunks are cached for reuse
+                prompt_cache = get_prompt_cache()
+                try:
+                    for filename, score, content in results:
+                        prompt_cache.cache_context_chunk(content, {"source": filename, "score": score})
+                except Exception as e:
+                    print(f"[WARN] Error caching context chunks: {e}")
+
+                # Check prompt cache for an exact query+context hit
+                try:
+                    cached = prompt_cache.get_cached_response(user_input, context)
+                except Exception as e:
+                    print(f"[WARN] Error reading prompt cache: {e}")
+                    cached = None
+
+                # Display user message immediately (create placeholder)
+                current_history.append({"role": "user", "content": user_input})
+                ph = chat_container.empty()
+                with ph.container():
+                    with st.chat_message("user"):
+                        cp = st.empty()
+                        cp.markdown(user_input)
+                        placeholders.append(cp)
+
+                if cached:
+                    # Serve cached response immediately (no model call)
+                    cached_response_text = cached.get("response", "")
+                    ph = chat_container.empty()
+                    with ph.container():
+                        with st.chat_message("assistant"):
+                            cp = st.empty()
+                            cp.markdown(cached_response_text)
+                            placeholders.append(cp)
+
+                    # Update sidebar with cache info
+                    if cached.get("tokens_saved", 0) > 0:
+                        st.sidebar.info(f"[CACHE] Estimated tokens saved: {cached['tokens_saved']}")
+
+                    # Append cached response to history and skip generic append
+                    current_history.append({"role": "assistant", "content": cached_response_text})
+                    # Mark rendered count to avoid duplicate rendering
+                    st.session_state.rendered_counts[mode] = len(current_history)
+                    skip_generic_append = True
+                else:
+                    full_response = ""
+                    # Streaming generator from rag streaming helper
+                    response_stream = answer_with_context_stream(
+                        selected_chat_model['id'],
+                        user_input,
+                        context,
+                        message_history=temp_history,
+                        temperature=temperature,
+                        top_p=top_p,
+                        character_stream=True
+                    )
+
+                    ph = chat_container.empty()
+                    with ph.container():
+                        with st.chat_message("assistant"):
+                            assistant_cp = st.empty()
+                            assistant_cp.markdown("_Assistant is generating response..._")
+                            placeholders.append(assistant_cp)
+                            for token in response_stream:
+                                full_response += token
+                                assistant_cp.markdown(full_response)
+
+                    response = full_response
+                    # Cache the new response for future queries
+                    try:
+                        estimated_tokens_saved = len(context.split()) // 4
+                        prompt_cache.cache_response(user_input, context, response, selected_chat_model['id'], tokens_saved=estimated_tokens_saved)
+                        if estimated_tokens_saved > 0:
+                            st.sidebar.info(f"[SAVED] Estimated tokens saved: {estimated_tokens_saved}")
+                    except Exception as e:
+                        print(f"[WARN] Error caching response: {e}")
+
+                    current_history.append({"role": "assistant", "content": response})
+                    # assistant placeholder already updated in-place
+                    skip_generic_append = True
             else:
                 response = "No relevant documents found."
         else:
-            with st.spinner("Assistant is generating response..."):
-                response = retry_bedrock_call(chat_with_bedrock, selected_chat_model['id'], user_input, temp_history)
-            time.sleep(1.5)
+            # Stream conversational response token-by-token for better responsiveness
+            # We'll display streaming tokens in the assistant chat bubble and
+            # avoid the generic double-append later by setting `skip_generic_append`.
+            selected_model_id = selected_chat_model['id']
+            # Display user message immediately (create placeholder)
+            current_history.append({"role": "user", "content": user_input})
+            ph = chat_container.empty()
+            with ph.container():
+                with st.chat_message("user"):
+                    cp = st.empty()
+                    cp.markdown(user_input)
+                    placeholders.append(cp)
+
+            full_response = ""
+            # Streaming generator from chat_stream
+            response_stream = chat_stream(
+                selected_model_id,
+                user_input,
+                message_history=temp_history,
+                temperature=temperature,
+                top_p=top_p,
+                character_stream=True
+            )
+
+            stats_data = None
+            ph = chat_container.empty()
+            with ph.container():
+                with st.chat_message("assistant"):
+                    assistant_cp = st.empty()
+                    assistant_cp.markdown("_Assistant is generating response..._")
+                    placeholders.append(assistant_cp)
+                    for token in response_stream:
+                        # chat_stream yields plain chunks (strings)
+                        full_response += token
+                        assistant_cp.markdown(full_response)
+
+            response = full_response
+            # Append assistant response to history
+            current_history.append({"role": "assistant", "content": response})
+            # assistant placeholder already updated in-place
+            # Prevent the generic append block below from duplicating entries
+            skip_generic_append = True
     else:
         embed_model = embedding_models[0]
         optimized_rag = get_optimized_rag()
         
-        # Append user message to history immediately
+        # Append user message to history immediately and render placeholder
         current_history.append({"role": "user", "content": user_input})
-        # Display user message immediately in chat
-        with st.chat_message("user"):
-            st.markdown(user_input)
+        ph = chat_container.empty()
+        with ph.container():
+            with st.chat_message("user"):
+                cp = st.empty()
+                cp.markdown(user_input)
+                placeholders.append(cp)
         
         # Use streaming for RAG responses
         response_stream = optimized_rag.answer_with_optimization_stream(
@@ -160,24 +308,25 @@ if user_input:
             retrieve_past_contexts=True
         )
         
-        # Display streaming response in chat
+        # Display streaming response in chat using a placeholder
         full_response = ""
         stats_data = None
-        with st.chat_message("assistant"):
-            response_placeholder = st.empty()
-            # Show a busy indicator while the model starts generating
-            response_placeholder.markdown("_Assistant is generating response..._")
-            
-            # Collect all tokens and stats
-            for token, stats_update in response_stream:
-                full_response += token
-                stats_data = stats_update
-                # Update the display in real-time
-                response_placeholder.markdown(full_response)
+        ph = chat_container.empty()
+        with ph.container():
+            with st.chat_message("assistant"):
+                assistant_cp = st.empty()
+                # Show a busy indicator while the model starts generating
+                assistant_cp.markdown("_Assistant is generating response..._")
+                placeholders.append(assistant_cp)
+                # Collect all tokens and stats
+                for token, stats_update in response_stream:
+                    full_response += token
+                    stats_data = stats_update
+                    # Update the display in real-time
+                    assistant_cp.markdown(full_response)
         
         response = full_response
-        
-        # Add assistant response to history
+        # Add assistant response to history (placeholder already has final content)
         current_history.append({"role": "assistant", "content": response})
         
         # Display optimization stats after streaming completes
@@ -187,13 +336,21 @@ if user_input:
                 if stats_data.get('tokens_saved', 0) > 0:
                     st.sidebar.info(f"[SAVED] Estimated tokens saved: {stats_data['tokens_saved']}")
 
-    # For non-RAG modes, append to history normally
-    if mode != "Intelligent Document Querying Mode (RAG)":
-        current_history.append({"role": "user", "content": user_input})
-        current_history.append({"role": "assistant", "content": response})
-        
-        # Display new messages in chat
-        with st.chat_message("user"):
-            st.markdown(user_input)
-        with st.chat_message("assistant"):
-            st.markdown(response)
+    # For non-RAG modes, append to history normally unless streaming already handled it
+    if not ( 'skip_generic_append' in locals() and skip_generic_append ):
+        if mode != "Intelligent Document Querying Mode (RAG)":
+            current_history.append({"role": "user", "content": user_input})
+            current_history.append({"role": "assistant", "content": response})
+            # Display new messages via placeholders to keep single renderer behavior
+            ph = chat_container.empty()
+            with ph.container():
+                with st.chat_message("user"):
+                    ucp = st.empty()
+                    ucp.markdown(user_input)
+                    placeholders.append(ucp)
+            ph2 = chat_container.empty()
+            with ph2.container():
+                with st.chat_message("assistant"):
+                    acp = st.empty()
+                    acp.markdown(response)
+                    placeholders.append(acp)

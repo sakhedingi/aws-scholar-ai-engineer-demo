@@ -145,3 +145,70 @@ def chat_with_bedrock(model_id, user_message, message_history=None, temperature=
     except ClientError as e:
         print(f"Error invoking model: {e}")
         return None
+
+
+def chat_stream(model_id, user_message, message_history=None, temperature=0.7, top_p=0.9, character_stream=True):
+    """
+    Stream a conversational response from Bedrock token-by-token.
+    Yields text pieces (chars or small chunks) for real-time UI updates.
+
+    Args:
+        model_id: Bedrock model id
+        user_message: The user's message string
+        message_history: Optional list of prior messages (role/content dicts)
+        temperature: Sampling temperature
+        top_p: Nucleus sampling parameter
+        character_stream: If True, yield character-level pieces for smoother UI
+
+    Yields:
+        str tokens from the model streaming endpoint
+    """
+    try:
+        if message_history is None:
+            message_history = []
+
+        # Build the body dict similar to chat_with_bedrock but for streaming
+        if 'claude' in model_id.lower():
+            if 'claude-3' in model_id.lower():
+                temp_messages = message_history + [{"role": "user", "content": user_message}]
+                body_dict = {
+                    "anthropic_version": "bedrock-2023-05-31",
+                    "max_tokens": 1000,
+                    "messages": temp_messages,
+                    "temperature": temperature,
+                    "top_p": top_p
+                }
+            else:
+                body_dict = {
+                    "prompt": f"\n\nHuman: {user_message}\n\nAssistant:",
+                    "max_tokens_to_sample": 1000,
+                    "temperature": temperature,
+                    "top_p": top_p
+                }
+        elif 'titan' in model_id.lower():
+            body_dict = {
+                "inputText": user_message,
+                "textGenerationConfig": {
+                    "maxTokenCount": 1000,
+                    "temperature": temperature,
+                    "top_p": top_p
+                }
+            }
+        elif 'llama' in model_id.lower() or 'mistral' in model_id.lower():
+            body_dict = {
+                "prompt": f"<s>[INST] {user_message} [/INST]",
+                "max_tokens": 1000,
+                "temperature": temperature,
+                "top_p": top_p
+            }
+        else:
+            yield f"Model not supported: {model_id}"
+            return
+
+        # Delegate to the generic streaming helper
+        for chunk in invoke_model_stream(model_id, body_dict, character_stream=character_stream):
+            yield chunk
+
+    except Exception as e:
+        print(f"Error in chat_stream: {e}")
+        yield f"Error: {str(e)}"
