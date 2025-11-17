@@ -2,6 +2,82 @@ import json
 from botocore.exceptions import ClientError
 from .bedrock_runtime import get_bedrock_runtime
 
+def invoke_model_stream(model_id, body_dict, content_type='application/json', character_stream=True):
+    """
+    Stream response tokens from Bedrock model.
+    Yields text tokens one by one for real-time display.
+    
+    Args:
+        model_id: Bedrock model ID
+        body_dict: Request body as dictionary
+        content_type: Content type (default: 'application/json')
+        character_stream: If True, break larger chunks into character-level streams for smoother UI (default: True)
+    
+    Yields:
+        Text tokens (chars or words) from the model response
+    """
+    bedrock_runtime = get_bedrock_runtime()
+    body = json.dumps(body_dict) if isinstance(body_dict, dict) else body_dict
+    
+    try:
+        response = bedrock_runtime.invoke_model_with_response_stream(
+            modelId=model_id,
+            body=body,
+            contentType=content_type,
+            accept='application/json'
+        )
+        
+        # Parse streaming response based on model type
+        if 'claude' in model_id.lower():
+            # Claude uses event stream format
+            for event in response['body']:
+                if 'chunk' in event:
+                    chunk_data = json.loads(event['chunk']['bytes'].decode('utf-8'))
+                    if 'delta' in chunk_data and 'text' in chunk_data['delta']:
+                        text = chunk_data['delta']['text']
+                        if character_stream:
+                            # Stream character by character for smoother UI
+                            for char in text:
+                                yield char
+                        else:
+                            yield text
+        elif 'titan' in model_id.lower():
+            # Titan streaming format
+            for event in response['body']:
+                if 'chunk' in event:
+                    chunk_data = json.loads(event['chunk']['bytes'].decode('utf-8'))
+                    if 'outputText' in chunk_data:
+                        text = chunk_data['outputText']
+                        if character_stream:
+                            # Break into smaller chunks for responsive streaming
+                            for i in range(0, len(text), 10):  # 10 chars at a time
+                                yield text[i:i+10]
+                        else:
+                            yield text
+        elif 'llama' in model_id.lower() or 'mistral' in model_id.lower():
+            # Llama/Mistral streaming format
+            for event in response['body']:
+                if 'chunk' in event:
+                    chunk_data = json.loads(event['chunk']['bytes'].decode('utf-8'))
+                    if 'generation' in chunk_data:
+                        text = chunk_data['generation']
+                        if character_stream:
+                            for i in range(0, len(text), 10):
+                                yield text[i:i+10]
+                        else:
+                            yield text
+                    elif 'outputs' in chunk_data and chunk_data['outputs']:
+                        if 'text' in chunk_data['outputs'][0]:
+                            text = chunk_data['outputs'][0]['text']
+                            if character_stream:
+                                for i in range(0, len(text), 10):
+                                    yield text[i:i+10]
+                            else:
+                                yield text
+    except Exception as e:
+        print(f"Error streaming from model: {e}")
+        yield f"Error: {str(e)}"
+
 def chat_with_bedrock(model_id, user_message, message_history=None, temperature=0.7, top_p=0.9):
     bedrock_runtime = get_bedrock_runtime()
     try:

@@ -13,20 +13,20 @@ def load_documents_from_folder(folder_path):
                 with open(full_path, "r", encoding="utf-8") as f:
                     content = f.read()
             except Exception as e:
-                print(f"❌ Failed to read TXT: {filename} — {e}")
+                print(f"[ERROR] Failed to read TXT: {filename}  {e}")
                 continue
         elif filename.endswith(".pdf"):
             try:
                 content = extract_pdf_text(full_path)
             except Exception as e:
-                print(f"❌ Failed to read PDF: {filename} — {e}")
+                print(f"[ERROR] Failed to read PDF: {filename}  {e}")
                 continue
         elif filename.endswith(".docx"):
             try:
                 doc = Document(full_path)
                 content = "\n".join([para.text for para in doc.paragraphs])
             except Exception as e:
-                print(f"❌ Failed to read DOCX: {filename} — {e}")
+                print(f"[ERROR] Failed to read DOCX: {filename}  {e}")
                 continue
         else:
             continue
@@ -49,9 +49,9 @@ def build_vector_store_from_folder(folder_path, embed_model_id):
                 "content": doc["content"],
                 "embedding": embedding
             })
-            print(f"✅ Embedded: {doc['filename']}")
+            print(f"[OK] Embedded: {doc['filename']}")
         else:
-            print(f"❌ Failed to embed: {doc['filename']}")
+            print(f"[ERROR] Failed to embed: {doc['filename']}")
     return store
 
 def semantic_search_local(query_text, embed_model_id, store, top_k=3):

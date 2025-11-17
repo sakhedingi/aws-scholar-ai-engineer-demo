@@ -1,0 +1,261 @@
+# 📘 NESD-QA Gherkin Scripting Knowledge Base (RAG-Ready Format)
+
+---
+
+## 🧭 Purpose
+
+This guide aligns Test Analysts and Test Automators on how to write Gherkin scripts for NESD-QA automation. It defines expected syntax, reusable steps, and domain-specific parameters for consistent test automation.
+
+---
+
+## 📚 Glossary
+
+| Term     | Definition                                                  |
+|----------|-------------------------------------------------------------|
+| UNITS    | Unit code for SMS bundles on Fusion                         |
+| MINUTES  | Unit code for Voice bundles on Fusion                       |
+| MB, GB   | Unit codes for Data bundles on Fusion                       |
+
+---
+
+## 📱 Subscriber Profile Management
+
+### Create New Subscriber
+
+- **Step:**  
+  `Given New subscriber <Subscriber_type> profile is <Offerring_Code>`
+	Subscriber_type can be any random test number (eg. 27639568950)
+
+- **Behavior:**  
+  Deletes and recreates MSISDN profile on CCS using `<Offerring_Code>` (e.g., "NOF5", "WF5").
+
+---
+
+### Create Multiple Subscribers
+
+- **Step:**  
+  `Given Multiple New subscribers <Hybrid_Subscriber> profile is <Hybrid_Offerring_Code> and <Prepaid_Subscriber> profile is <Prepaid_Offerring_Code>`
+
+- **Behavior:**  
+  Creates two subscriber profiles:
+  - Hybrid: `<Hybrid_Subscriber>` with `<Hybrid_Offerring_Code>` (e.g., "WF12")
+  - Prepaid: `<Prepaid_Subscriber>` with `<Prepaid_Offerring_Code>` (e.g., "NOF7")
+
+---
+
+### Use Existing Subscriber
+
+- **Step:**  
+  `Given Existing subscriber is <Subscriber_type> with offering code <Offerring_Code>`
+
+- **Behavior:**  
+  Reuses an existing MSISDN without recreating it.
+
+---
+
+### Create CUR Profile
+
+- **Step:**  
+  ```
+  And CUR profile is set with attributes
+  {
+    "billingplatformid": "300",
+    "paymenttype": "P"
+  }
+  ```
+
+- **Notes:**
+  - `"paymenttype"`: "P" = Prepaid, "H" = Hybrid, "C" = Postpaid
+  - Always use triple quotes and comma-separated attributes
+
+---
+
+## 🔁 Fusion Transactions
+
+### Set FI Details
+
+- **Step:**  
+  `And Set FI specific details "FI Code" is <FICode> and schemeAgencyName is <Company>`
+
+---
+
+### Eligibility Checks
+
+- **Swagger:**  
+  `And send Swagger eligibility for "<Recharge_Amount>"`  
+  `And send Swagger eligibility for <SOID>`
+
+- **Non-Swagger:**  
+  `And send nonSwagger eligibility for "<Recharge_Amount>"`  
+  `And send nonSwagger eligibility for <SOID>`
+
+---
+
+### Airtime Recharge
+
+- **Swagger:**  
+  `When Sweggar recharge via FI Fusion recharge value of <Recharge_Amount> ZAR`
+
+- **Non-Swagger:**  
+  `When nonSweggar recharge via FI Fusion recharge value of <Recharge_Amount> ZAR`
+
+---
+
+### Bundle Purchase via Fusion
+
+- **SOID-based:**  
+  `When I purchase via fusion soid is <SOID> price is <Purchase_Amount> bundle size is <Bundle_Size> unit code is <unit_code> validity period is <validity_period>`
+
+- **Product ID-based:**  
+  `When I purchase via fusion product id is <Product_ID> price is <Purchase_Amount> bundle size is <Voice_Bundle> unit code is <unit_code>`
+
+- **Delete Bundle:**  
+  `When I Delete Bundle via fusion soid is <SOID> price is <Purchase_Amount> bundle size is <Data_Bundle> unit code is <unit_code> validity period is <validity_period>`
+
+---
+
+### Add-to-Bill Purchase
+
+- **Steps:**
+  ```
+  And Set Additional Fusion Properties <additionalstr>
+  When Subscriber using "Add-To-Bill" purchases bundle <SOID> price is <Purchase_Amount> bundle size is <Data_Bundle> validity period is <validity_period>
+  ```
+
+- **Payload Format:**  
+  `"FI_cost:12/FormatId:B005"`
+
+---
+
+## 💰 Airtime Balance Adjustments
+
+- **Step:**  
+  `And Subscriber <MonetaryType_Code> balance is <Recharge_amount>`
+
+- **Examples:**  
+  - `MonetaryType_Code = "C_VZA_PPS_MainAccount"`  
+  - `Recharge_amount = 4.00`
+
+---
+
+## ✅ Verification Steps
+
+### CCS Bundle Provisioning
+
+- **Non-Prorated:**  
+  `Then Data bundle for OfferingID <OfferingID> allocated is <Bundle_Size>`
+
+- **Prorated:**  
+  `Then Data bundle for OfferingID <OfferingID> allocated is <Bundle_Size> free unit is <FreeUnit> <Prorated>`
+
+- **Other Types:**  
+  - `Then SMS bundle for OfferingID...`  
+  - `Then Voice bundle for OfferingID...`  
+  - `Then Total Data bundle for OfferingID...`
+
+---
+
+### Airtime Balance Verification
+
+- **Deduction:**  
+  `Then amount <Purchase_Amount>ZAR is deducted from <Recharge_amount> <MonetaryType_Code> money counter`
+
+- **Credit:**  
+  `Then amount <Purchase_Amount>ZAR is credited into <MonetaryType_Code> money counter`
+
+- **Instant Recharge Limit:**  
+  `And Verify instant Recharge limit is <InstantRechargeLimit>cents`
+
+---
+
+### Expiry Period
+
+- **Days-based:**  
+  `And Expiry period is <Expiry_Date> with Offerring ID <OfferingID>`
+
+- **Calendar Month-based:**  
+  `And Expiry period is <Expiry_Date> with Offerring ID <OfferingID> and free unit <FreeUnit> calendar month <Prorated>`
+
+---
+
+### Fusion Verification
+
+- **Balance:**  
+  `Then verify "C_VZA_PPS_MainAccount" service balances remaining airtime`
+
+- **Bundle:**  
+  `Then fusion service bundle <FreeUnit> <OfferingID> for product <Product_Name> is <Bundle_Size> <Prorated>`
+
+- **Validity:**  
+  `Then fusion service validity <FreeUnit> <OfferingID> <Validity_Type> for product <Product_Name> is <Expiry_Date>`
+
+- **Description:**  
+  `Then verify fusion <FreeUnit> <OfferingID> <Product_Name> <Product_desc>`
+
+---
+
+## 🔁 Voice, Data, Airtime Advance
+
+- **Purchase:**  
+  `When I purchase via fusion product id is <Product_ID> price is <Purchase_Amount> and service fee <Servicefee>`
+
+- **Verify Loan:**  
+  `Then amount <Purchase_Amount>ZAR is added into <LoanAmount>ZAR loan counter`
+
+- **Verify Deduction:**  
+  `Then outstanding amount <Purchase_Amount>ZAR and service <Servicefee>ZAR is deducted from recharge amount <Recharge_Amount>ZAR`
+
+---
+
+## 👥 Buy for Another
+
+- **Setup:**  
+  `Given Multiple New subscribers <Subscriber_type1> profile is <Offerring_Code1> and <Subscriber_type2> profile is <Offerring_Code2>`
+
+- **Purchase:**  
+  `When I buy for another via fusion soid is <SOID> price is <Purchase_Amount> bundle size is <Data_Bundle> unit code is <unit_code> validity period is <validity_period>`
+
+- **Verify Transfer:**  
+  `And Data bundle for OfferingID <OfferingID> allocated is <Data_Bundle> is transfered to <Subscriber_type2> with free unit code <FreeUnit> <Prorated>`
+
+---
+
+## ✉️ SMS Verification
+
+- **Template:**  
+  `And SMS template for SOID <SOID> is "Your {0} bundle has been provisioned and will be valid until {1,date,yyyy-MM-dd 'at' HH:mm:ss}."`
+
+- **Message Verification:**  
+  `And SMS message for SOID <SOID> bundle size <Data_Bundle> and expiry date <Expiry_Date> and calendar month <Prorated> is sent`
+
+---
+
+## 🔄 FreeChange
+
+- **Steps:**
+  ```
+  And Subscriber is eligible to change to <toOffer>
+  When subscriber performs free change from product offer <Offerring_Code> to product offer <toOffer>
+  Then subscriber product offer is <toOffer>
+  ```
+
+---
+
+## 🎁 Vodabucks
+
+- **Add:**  
+  `When add {double} vodabucks for the subscriber`
+
+- **Deduct:**  
+  `Then verify that {double} vodabucks is deducted for the subscriber`
+
+- **Verify Allocation:**  
+  `Then verify that {double} vodabucks is allocated for the subscriber`
+
+- **Balance Check:**  
+  `And get vodabucks balance for the subscriber`
+
+- **Banking:**  
+  `And bank vodabucks for the subscriber`
+
+---

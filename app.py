@@ -3,11 +3,17 @@ from bedrock_app.model_listing import list_bedrock_models
 from bedrock_app.chat import chat_with_bedrock
 from bedrock_app.semantic_search import build_vector_store_from_folder, semantic_search_local
 from bedrock_app.rag import answer_with_context
+from bedrock_app.optimized_rag import OptimizedRAG
 import time
 import random
 import os
 
 os.makedirs("./temp_docs", exist_ok=True)
+
+# Initialize optimized RAG system
+@st.cache_resource
+def get_optimized_rag():
+    return OptimizedRAG()
 
 def retry_bedrock_call(func, *args, retries=5, base_delay=1, max_delay=15):
     for attempt in range(1, retries + 1):
@@ -19,7 +25,7 @@ def retry_bedrock_call(func, *args, retries=5, base_delay=1, max_delay=15):
                 # Exponential backoff + jitter (recommended by AWS)
                 sleep_time = min(base_delay * (2 ** (attempt - 1)), max_delay)
                 sleep_time += random.uniform(0, 0.5)
-                print(f"⏳ Throttled by Bedrock. Waiting {sleep_time:.2f}s (attempt {attempt}/{retries})...")
+                print(f" Throttled by Bedrock. Waiting {sleep_time:.2f}s (attempt {attempt}/{retries})...")
                 time.sleep(sleep_time)
             else:
                 print(f"Unexpected error: {e}")
@@ -28,7 +34,7 @@ def retry_bedrock_call(func, *args, retries=5, base_delay=1, max_delay=15):
 
 st.set_page_config(page_title="SDQA AI Assistant", layout="wide")
 
-st.sidebar.title("🧠 SDQA AI Assistant")
+st.sidebar.title(" SDQA AI Assistant")
 mode = st.sidebar.radio("Select Assistant Mode", ["Conversational Mode or RAG", "Intelligent Document Querying Mode (RAG)"])
 chat_models, embedding_models = list_bedrock_models()
 for chat_model in chat_models:
@@ -39,7 +45,7 @@ for chat_model in chat_models:
 chat_model_names = [m['name'] for m in chat_models]
 selected_chat_name = st.sidebar.selectbox("Choose AI Model", selected_chat_name)
 selected_chat_model = next(m for m in chat_models if m['name'] == selected_chat_name)
-st.sidebar.markdown("### 🔧 Model Behavior Settings")
+st.sidebar.markdown("###  Model Behavior Settings")
 temperature = st.sidebar.slider("Temperature", min_value=0.0, max_value=1.0, value=0.7, step=0.05)
 top_p = st.sidebar.slider("Top-p (nucleus sampling)", min_value=0.0, max_value=1.0, value=0.9, step=0.05)
 
@@ -48,9 +54,22 @@ if mode == "Intelligent Document Querying Mode (RAG)":
     st.sidebar.markdown(f"**Embedding Model:** {embed_model['name']}")
     kb_folder = "./knowledge_base"
     st.sidebar.markdown(f"**Knowledge Base:** `{kb_folder}`")
-    st.session_state.vector_store = build_vector_store_from_folder(kb_folder, embed_model['id'])
+    
+    # Use optimized RAG with pre-vectorization
+    optimized_rag = get_optimized_rag()
+    if "kb_initialized" not in st.session_state:
+        with st.spinner("[INIT] Initializing optimized knowledge base..."):
+            optimized_rag.initialize_knowledge_base(kb_folder, embed_model['id'])
+            st.session_state.kb_initialized = True
+    
+    # Show optimization stats
+    with st.sidebar.expander(" Optimization Stats"):
+        stats = optimized_rag.get_optimization_stats()
+        st.write("**Vector Store:**", stats["vector_store"])
+        st.write("**Prompt Cache:**", stats["prompt_cache"])
+        st.write("**Memory Store:**", stats["memory_store"])
 
-st.title("🤖 SDQA AI Assistant")
+st.title("[AI] SDQA AI Assistant")
 
 # Initialize history if not present
 if "mode_histories" not in st.session_state:
@@ -68,15 +87,18 @@ if "greeting_shown" not in st.session_state:
 
 if not st.session_state.greeting_shown[mode]:
     greeting = (
-        "👋 Hello! I'm ready to chat. How can I help you?"
+        " Hello! I'm ready to chat. How can I help you?"
         if mode == "Conversational Mode or RAG"
-        else "📚 Ready to answer questions from your knowledge base. Ask me anything based on your documents!"
+        else "[MEM] Ready to answer questions from your knowledge base. Ask me anything based on your documents!"
     )
     st.session_state.mode_histories[mode].append({"role": "assistant", "content": greeting})
     st.session_state.greeting_shown[mode] = True
 
-# Create a placeholder container to suppress default rendering
-chat_container = st.container()
+# Render chat history BEFORE capturing input
+with st.container():
+    for msg in st.session_state.mode_histories[mode]:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
 
 # Capture user input
 user_input = st.chat_input("Ask a question...")
@@ -112,24 +134,66 @@ if user_input:
             else:
                 response = "No relevant documents found."
         else:
-            response = retry_bedrock_call(chat_with_bedrock, selected_chat_model['id'], user_input, temp_history)
+            with st.spinner("Assistant is generating response..."):
+                response = retry_bedrock_call(chat_with_bedrock, selected_chat_model['id'], user_input, temp_history)
             time.sleep(1.5)
     else:
-        results = semantic_search_local(user_input, embed_model['id'], st.session_state.vector_store)
-        if results:
-            context = "\n\n".join([r[2] for r in results])
-            response = retry_bedrock_call(answer_with_context, selected_chat_model['id'], user_input, context, temp_history)
-            if response is None or response == "Bedrock API throttled. Please try again later.":
-                response = "I couldn't generate a response right now. Please try again shortly or rephrase your question."
-        else:
-            response = "No relevant documents found."
+        embed_model = embedding_models[0]
+        optimized_rag = get_optimized_rag()
+        
+        # Append user message to history immediately
+        current_history.append({"role": "user", "content": user_input})
+        # Display user message immediately in chat
+        with st.chat_message("user"):
+            st.markdown(user_input)
+        
+        # Use streaming for RAG responses
+        response_stream = optimized_rag.answer_with_optimization_stream(
+            model_id=selected_chat_model['id'],
+            user_question=user_input,
+            embed_model_id=embed_model['id'],
+            message_history=temp_history,
+            temperature=temperature,
+            top_p=top_p,
+            use_cache=True,
+            store_memory=True,
+            retrieve_past_contexts=True
+        )
+        
+        # Display streaming response in chat
+        full_response = ""
+        stats_data = None
+        with st.chat_message("assistant"):
+            response_placeholder = st.empty()
+            # Show a busy indicator while the model starts generating
+            response_placeholder.markdown("_Assistant is generating response..._")
+            
+            # Collect all tokens and stats
+            for token, stats_update in response_stream:
+                full_response += token
+                stats_data = stats_update
+                # Update the display in real-time
+                response_placeholder.markdown(full_response)
+        
+        response = full_response
+        
+        # Add assistant response to history
+        current_history.append({"role": "assistant", "content": response})
+        
+        # Display optimization stats after streaming completes
+        if stats_data and not stats_data.get("cache_hit", False):
+            if stats_data.get('optimization_source'):
+                st.sidebar.success(f" Optimizations: {', '.join(stats_data['optimization_source'])}")
+                if stats_data.get('tokens_saved', 0) > 0:
+                    st.sidebar.info(f"[SAVED] Estimated tokens saved: {stats_data['tokens_saved']}")
 
-    # Append both messages to history
-    current_history.append({"role": "user", "content": user_input})
-    current_history.append({"role": "assistant", "content": response})
-
-# Render full history
-with chat_container:
-    for msg in st.session_state.mode_histories[mode]:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
+    # For non-RAG modes, append to history normally
+    if mode != "Intelligent Document Querying Mode (RAG)":
+        current_history.append({"role": "user", "content": user_input})
+        current_history.append({"role": "assistant", "content": response})
+        
+        # Display new messages in chat
+        with st.chat_message("user"):
+            st.markdown(user_input)
+        with st.chat_message("assistant"):
+            st.markdown(response)
