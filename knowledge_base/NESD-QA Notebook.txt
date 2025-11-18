@@ -259,3 +259,87 @@ This guide aligns Test Analysts and Test Automators on how to write Gherkin scri
   `And bank vodabucks for the subscriber`
 
 ---
+
+**VoMS:**
+
+When Subscriber redeems valid voucher for voucher type <Voucher_type> via IVR
+When Subscriber redeems valid voucher for voucher type <Voucher_type> via USSD
+When Subscriber redeems valid voucher for voucher type <Voucher_type> via SMS
+
+• For all three VOMS redeems functions, this will perform VOMS voucher redeem/recharge based on the provided Voucher_type
+• The function will automatically perform a voucher PIN generation if there is no existing and active voucher in batch stored in the database.
+
+Product Description                       | Denomination | Voucher Type | Code
+--------------------------------------------------------------------------------
+R 110 PIN vodago                          | 110          | vodago       | 31
+R 275 PIN vodago                          | 275          | vodago       | 36
+R 29 PIN vodago                           | 29           | vodago       | 16
+R60 Yebo5 PIN                             | 12           | PIN          | 42
+R49 SMS PIN                               | 49           | PIN          | 44
+R49 SMS PIN                               | 49           | PIN          | 43
+R25 Yebo5 PIN                             | 5            | PIN          | 6
+P 60Min VB Pin                             | 5            | Pin          | 4722
+P 10Min VB Pin                             | 2            | Pin          | 4724
+P 10Min VB Pin                             | 2            | Pin          | 4720
+P 50MB 1Hr Pin                             | 5            | Pin          | 4726
+P 50MB 1Hr Pin                             | 5            | Pin          | 4727
+MyMeg500DB Pin - 30 Days                  | 79           | Pin          | 5205
+MyGig1DB Pin - 30 Days                    | 99           | Pin          | 5206
+MONTHLY 20GB PIN                          | 699          | PIN          | 5211
+Monthly 50MB PIN                          | 12           | PIN          | 5215
+Monthly 325MB PIN                         | 55           | PIN          | 5217
+Daily 60MB PIN                            | 9            | PIN          | 5226
+Daily 100MB PIN                           | 15           | PIN          | 5227
+Daily 250MB PIN                           | 27           | PIN          | 5228
+Weekly 100MB PIN                          | 17           | PIN          | 5229
+Weekly 1GB PIN                            | 80           | PIN          | 5232
+Weekly 2GB PIN                            | 120          | PIN          | 5233
+100MB Recur 6 Months PIN                  | 119          | PIN          | 5236
+250MB Recur 6 Months PIN                  | 219          | PIN          | 5237
+WEEKLY 120MB R17 PIN                      | 17           | PIN          | 5390
+WEEKLY 2GB R99 PIN                        | 99           | PIN          | 5373
+WEEKLY 5GB R199 PIN                       | 199          | PIN          | 5374
+MONTHLY 2GB R149 PIN                      | 149          | PIN          | 5375
+WEEKLY 500MB R49 PIN                      | 49           | PIN          | 5371
+Monthly 3GB PIN                           | 229          | PIN          | 5208
+WEEKLY 1GB R69 PIN                        | 69           | PIN          | 5372
+Monthly 350MB                             | 49           | (none)       | 5194
+MONTHLY 5GB PIN                           | 349          | PIN          | 5209
+R 55 PIN vodago                           | 55           | vodago       | 26
+Daily 20MB PIN                            | 5            | PIN          | 5225
+WEEKLY 250MB R29 PIN                      | 29           | PIN          | 5370
+R25 Yebo5 PIN                             | 5            | PIN          | 5
+WA 250MB 1DAY R5 PIN                      | 4            | PIN          | 9484
+R2.00 Electronic PIN                      | 2            | PIN          | 96
+WA 50MB 1DAY R3 PIN                       | 3            | PIN          | 9482
+R799/M50GB30D                             | 799          | (none)       | 5396
+R60 Yebo5 PIN                             | 12           | PIN          | 41
+WA 250MB 7DAY R12 PIN                     | 12           | PIN          | 9485
+R0 Variable Pin                           | 0            | Pin          | 99
+R 55 PIN vodago                           | 55           | vodago       | 25
+WA 100MB 3DAY R6 PIN                      | 6            | PIN          | 9483
+Monthly 1GB                               | 85           | (none)       | 5196
+MONTHLY 30GB R699                         | 699          | (none)       | 5392
+MONTHLY 4GB R249 PIN                      | 249          | PIN          | 5376
+R 1100 PIN vodago                         | 1100         | vodago       | 37
+Weekly 250MB PIN                          | 35           | PIN          | 5230
+Monthly 500MB                             | 69           | (none)       | 5195
+MONTHLY 10GB PIN                          | 469          | PIN          | 5210
+Weekly 500MB PIN                          | 60           | PIN          | 5231
+3GB 7Days PIN                             | 129          | PIN          | 5395
+MONTHLY 15GB R529 PIN                     | 529          | PIN          | 5377
+R 29 PIN vodago                           | 29           | vodago       | 15
+Monthly 150MB PIN                         | 29           | PIN          | 5216
+14Day 1GB PIN                             | 100          | PIN          | 5234
+R 1100 PIN vodago                         | 1100         | vodago       | 38
+R 275 PIN vodago                          | 275          | vodago       | 35
+R 110 PIN vodago                          | 110          | vodago       | 32
+R 10 Electronic PIN                       | 10           | PIN          | 98
+MONTHLY 6GB R349 PIN                      | 349          | PIN          | 5391
+R999/M100GB30D/TW365                      | 999          | (none)       | 5397
+Monthly 200MB                             | 29           | (none)       | 5198
+Hisence 30GB 30Days R599 PIN              | 599          | PIN          | 6779
+R35.00 WhatsApp 1GB - 30 Day              | 35           | (none)       | 6782
+Mobicel Epic 54GB 30Days R1199 PIN        | 1199         | PIN          | 6780
+Mobicel Oreo 30GB 30Days R599 PIN         | 599          | PIN          | 6778
+ITEL 54GB 30Days R1199 PIN                | 1199         | PIN          | 6781
