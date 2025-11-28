@@ -275,20 +275,20 @@ if user_input:
                 character_stream=True
             )
 
-        ph = chat_container.empty()
-        with ph.container():
-            with st.chat_message("assistant"):
-                assistant_cp = st.empty()
-                placeholders.append(assistant_cp)
+            ph = chat_container.empty()
+            with ph.container():
+                with st.chat_message("assistant"):
+                    assistant_cp = st.empty()
+                    placeholders.append(assistant_cp)
 
-                full_response = ""
+                    full_response = ""
 
-                with st.spinner("_Assistant is generating response..._"):
-                    for token in response_stream:
-                        full_response += token
-                        assistant_cp.markdown(full_response)
+                    with st.spinner("_Assistant is generating response..._"):
+                        for token in response_stream:
+                            full_response += token
+                            assistant_cp.markdown(full_response)
 
-            response = full_response
+                response = full_response
             # Append assistant response to history
             current_history.append({"role": "assistant", "content": response})
             # assistant placeholder already updated in-place
