@@ -63,18 +63,22 @@ if mode == "Intelligent Document Querying Mode (RAG)":
     # Use optimized RAG with pre-vectorization
     optimized_rag = get_optimized_rag()
     if "kb_initialized" not in st.session_state:
-        with st.spinner("[INIT] Initializing optimized knowledge base..."):
+        with st.spinner("Initializing knowledge base..."):
             optimized_rag.initialize_knowledge_base(kb_folder, embed_model['id'])
             st.session_state.kb_initialized = True
     
     # Show optimization stats
-    with st.sidebar.expander(" Optimization Stats"):
-        stats = optimized_rag.get_optimization_stats()
-        st.write("**Vector Store:**", stats["vector_store"])
-        st.write("**Prompt Cache:**", stats["prompt_cache"])
-        st.write("**Memory Store:**", stats["memory_store"])
+    # with st.sidebar.expander(" Optimization Stats"):
+    #     stats = optimized_rag.get_optimization_stats()
+    #     st.write("**Vector Store:**", stats["vector_store"])
+    #     st.write("**Prompt Cache:**", stats["prompt_cache"])
+    #     st.write("**Memory Store:**", stats["memory_store"])
 
-st.title("[AI] SDQA AI Assistant")
+if mode == "Conversational Mode or RAG":
+    st.title("AI Assistant")
+    
+else:
+    st.title("SDQA AI Assistant")
 
 # Initialize history if not present
 if "mode_histories" not in st.session_state:
@@ -99,9 +103,9 @@ if "greeting_shown" not in st.session_state:
 
 if not st.session_state.greeting_shown[mode]:
     greeting = (
-        " Hello! I'm ready to chat. How can I help you?"
+        "You can ask questions or upload a document to get started..."
         if mode == "Conversational Mode or RAG"
-        else "[MEM] Ready to answer questions from your knowledge base. Ask me anything based on your documents!"
+        else "Ask a question based on your knowledge base..."
     )
     st.session_state.mode_histories[mode].append({"role": "assistant", "content": greeting})
     st.session_state.greeting_shown[mode] = True
@@ -128,7 +132,10 @@ def render_history_into_placeholders(container, history):
 placeholders = render_history_into_placeholders(chat_container, st.session_state.mode_histories[mode])
 
 # Capture user input
-user_input = st.chat_input("Ask a question...")
+if mode == "Conversational Mode or RAG":
+    user_input = st.chat_input("Ask AI Asstistant.")
+else:
+    user_input = st.chat_input("Ask SDQA AI Assistant.")
 
 if mode == "Conversational Mode or RAG":
     uploaded_file = st.sidebar.file_uploader("Drop Your File Here", type=["pdf", "txt", "docx"])
@@ -214,15 +221,20 @@ if user_input:
                         character_stream=True
                     )
 
-                    ph = chat_container.empty()
-                    with ph.container():
-                        with st.chat_message("assistant"):
-                            assistant_cp = st.empty()
-                            assistant_cp.markdown("_Assistant is generating response..._")
-                            placeholders.append(assistant_cp)
+
+                ph = chat_container.empty()
+                with ph.container():
+                    with st.chat_message("assistant"):
+                        assistant_cp = st.empty()
+                        placeholders.append(assistant_cp)
+
+                        full_response = ""
+
+                        with st.spinner("_Assistant is generating response..._"):
                             for token in response_stream:
                                 full_response += token
                                 assistant_cp.markdown(full_response)
+
 
                     response = full_response
                     # Cache the new response for future queries
@@ -264,15 +276,16 @@ if user_input:
                 character_stream=True
             )
 
-            stats_data = None
-            ph = chat_container.empty()
-            with ph.container():
-                with st.chat_message("assistant"):
-                    assistant_cp = st.empty()
-                    assistant_cp.markdown("_Assistant is generating response..._")
-                    placeholders.append(assistant_cp)
+        ph = chat_container.empty()
+        with ph.container():
+            with st.chat_message("assistant"):
+                assistant_cp = st.empty()
+                placeholders.append(assistant_cp)
+
+                full_response = ""
+
+                with st.spinner("_Assistant is generating response..._"):
                     for token in response_stream:
-                        # chat_stream yields plain chunks (strings)
                         full_response += token
                         assistant_cp.markdown(full_response)
 
@@ -315,17 +328,18 @@ if user_input:
         with ph.container():
             with st.chat_message("assistant"):
                 assistant_cp = st.empty()
-                # Show a busy indicator while the model starts generating
-                assistant_cp.markdown("_Assistant is generating response..._")
                 placeholders.append(assistant_cp)
-                # Collect all tokens and stats
-                for token, stats_update in response_stream:
-                    full_response += token
-                    stats_data = stats_update
-                    # Update the display in real-time
-                    assistant_cp.markdown(full_response)
+
+                full_response = ""
+
+                with st.spinner("_Assistant is generating response..._"):
+                    for token, stats_update in response_stream:
+                        full_response += token
+                        stats_data = stats_update
+                        assistant_cp.markdown(full_response)
         
-        response = full_response
+            response = full_response
+            
         # Add assistant response to history (placeholder already has final content)
         current_history.append({"role": "assistant", "content": response})
         
