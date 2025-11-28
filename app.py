@@ -1,8 +1,8 @@
 import streamlit as st
 from bedrock_app.model_listing import list_bedrock_models
-from bedrock_app.chat import chat_with_bedrock, chat_stream
+from bedrock_app.chat import chat_stream
 from bedrock_app.semantic_search import build_vector_store_from_folder, semantic_search_local
-from bedrock_app.rag import answer_with_context, answer_with_context_stream
+from bedrock_app.rag import answer_with_context_stream
 from bedrock_app.optimized_rag import OptimizedRAG
 from bedrock_app.prompt_cache import PromptCache
 import time
@@ -39,7 +39,7 @@ def retry_bedrock_call(func, *args, retries=5, base_delay=1, max_delay=15):
 
 st.set_page_config(page_title="SDQA AI Assistant", layout="wide")
 
-st.sidebar.title(" SDQA AI Assistant")
+st.sidebar.title("SDQA AI Assistant")
 mode = st.sidebar.radio("Select Assistant Mode", ["Conversational Mode or RAG", "Intelligent Document Querying Mode (RAG)"])
 chat_models, embedding_models = list_bedrock_models()
 for chat_model in chat_models:
@@ -68,15 +68,14 @@ if mode == "Intelligent Document Querying Mode (RAG)":
             st.session_state.kb_initialized = True
     
     # Show optimization stats
-    # with st.sidebar.expander(" Optimization Stats"):
-    #     stats = optimized_rag.get_optimization_stats()
-    #     st.write("**Vector Store:**", stats["vector_store"])
-    #     st.write("**Prompt Cache:**", stats["prompt_cache"])
-    #     st.write("**Memory Store:**", stats["memory_store"])
+    with st.sidebar.expander(" Optimization Stats"):
+        stats = optimized_rag.get_optimization_stats()
+        st.write("**Vector Store:**", stats["vector_store"])
+        st.write("**Prompt Cache:**", stats["prompt_cache"])
+        st.write("**Memory Store:**", stats["memory_store"])
 
 if mode == "Conversational Mode or RAG":
     st.title("AI Assistant")
-    
 else:
     st.title("SDQA AI Assistant")
 
@@ -339,7 +338,7 @@ if user_input:
                         assistant_cp.markdown(full_response)
         
             response = full_response
-            
+
         # Add assistant response to history (placeholder already has final content)
         current_history.append({"role": "assistant", "content": response})
         
