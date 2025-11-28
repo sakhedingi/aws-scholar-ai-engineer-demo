@@ -109,7 +109,13 @@ if not st.session_state.greeting_shown[mode]:
     st.session_state.mode_histories[mode].append({"role": "assistant", "content": greeting})
     st.session_state.greeting_shown[mode] = True
     # Mark greeting as already rendered so top renderer shows it
-    # st.session_state.rendered_counts[mode] = len(st.session_state.mode_histories[mode])
+    
+# Before rendering messages:
+messages_to_render = [
+    msg for msg in st.session_state.mode_histories[mode]
+    if msg["content"] != greeting  # Filter out greeting
+]
+
 
 # Single chat container and placeholders for messages
 chat_container = st.container()
