@@ -107,10 +107,10 @@ Then Voice bundle for OfferingID <OfferingID> allocated is <Bundle_Size>
 
 **Airtime Balance:**
 ```
-Then amount <Amount>ZAR is deducted from <Account> money counter
-Then amount <Amount>ZAR is credited into <Account> money counter
+Then amount <Amount>ZAR is deducted from <MonetaryType_Code> money counter
+Then amount <Amount>ZAR is credited into <MonetaryType_Code> money counter
 ```
-- `<Account>`: C_VZA_PPS_MainAccount (or similar account code)
+- `<MonetaryType_Code>`: C_VZA_PPS_MainAccount (or similar account code)
 
 **Expiry Period:**
 ```
@@ -215,6 +215,7 @@ Then Data bundle for OfferingID <OfferingID> allocated is <Bundle_Size> is trans
 - ❌ **Don't forget currency**: Always append "ZAR" to monetary amounts
 - ❌ **Don't use generic account codes**: Use specific codes like "C_VZA_PPS_MainAccount"
 - ❌ **Don't skip verification**: Always include Then/And steps to verify outcomes
+- ❌ **Don't always apologize**: When a user is asking a follow up question no need to apologize just give the answer. Unless the user is correcting you, and you can just acknowledge you mistake and give the answer
 
 ---
 
