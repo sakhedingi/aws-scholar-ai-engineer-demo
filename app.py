@@ -106,7 +106,7 @@ if not st.session_state.greeting_shown[mode]:
         if mode == "Conversational Mode or RAG"
         else "Ask a question based on your knowledge base..."
     )
-    st.session_state.mode_histories[mode].append({"role": "assistant", "content": greeting})
+    st.session_state.mode_histories[mode].append({"role": "assistant", "content": ""})
     st.session_state.greeting_shown[mode] = True
     # Mark greeting as already rendered so top renderer shows it
     st.session_state.rendered_counts[mode] = len(st.session_state.mode_histories[mode])
