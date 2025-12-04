@@ -68,11 +68,11 @@ if mode == "Intelligent Document Querying Mode (RAG)":
             st.session_state.kb_initialized = True
     
     # Show optimization stats
-    with st.sidebar.expander(" Optimization Stats"):
-        stats = optimized_rag.get_optimization_stats()
-        st.write("**Vector Store:**", stats["vector_store"])
-        st.write("**Prompt Cache:**", stats["prompt_cache"])
-        st.write("**Memory Store:**", stats["memory_store"])
+#    with st.sidebar.expander(" Optimization Stats"):
+#        stats = optimized_rag.get_optimization_stats()
+#        st.write("**Vector Store:**", stats["vector_store"])
+#        st.write("**Prompt Cache:**", stats["prompt_cache"])
+#        st.write("**Memory Store:**", stats["memory_store"])
 
 if mode == "Conversational Mode or RAG":
     st.title("AI Assistant")
@@ -348,11 +348,11 @@ if user_input:
         current_history.append({"role": "assistant", "content": response})
         
         # Display optimization stats after streaming completes
-        if stats_data and not stats_data.get("cache_hit", False):
-            if stats_data.get('optimization_source'):
-                st.sidebar.success(f" Optimizations: {', '.join(stats_data['optimization_source'])}")
-                if stats_data.get('tokens_saved', 0) > 0:
-                    st.sidebar.info(f"[SAVED] Estimated tokens saved: {stats_data['tokens_saved']}")
+#        if stats_data and not stats_data.get("cache_hit", False):
+#            if stats_data.get('optimization_source'):
+#                st.sidebar.success(f" Optimizations: {', '.join(stats_data['optimization_source'])}")
+#                if stats_data.get('tokens_saved', 0) > 0:
+#                    st.sidebar.info(f"[SAVED] Estimated tokens saved: {stats_data['tokens_saved']}")
 
     # For non-RAG modes, append to history normally unless streaming already handled it
     if not ( 'skip_generic_append' in locals() and skip_generic_append ):
