@@ -101,12 +101,12 @@ if "greeting_shown" not in st.session_state:
     st.session_state.greeting_shown = {"Conversational Mode or RAG": False, "Intelligent Document Querying Mode (RAG)": False}
 
 if not st.session_state.greeting_shown[mode]:
-    greeting = (
-        "You can ask questions or upload a document to get started..."
-        if mode == "Conversational Mode or RAG"
-        else "Ask a question based on your knowledge base..."
-    )
-    st.session_state.mode_histories[mode].append({"role": "assistant", "content": greeting})
+    if mode == "Conversational Mode or RAG":
+        greeting = "You can ask questions or upload a document to get started..."
+        st.session_state.mode_histories[mode].append({"role": "assistant", "content": greeting})
+    else:
+        greeting = "Ask a question based on your knowledge base..."
+        st.info(greeting)
     st.session_state.greeting_shown[mode] = True
     # Mark greeting as already rendered so top renderer shows it
     
