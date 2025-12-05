@@ -106,7 +106,7 @@ if not st.session_state.greeting_shown[mode]:
         st.info(greeting)
     else:
         greeting = "Ask a question based on your knowledge base..."
-        st.subheader(greeting)
+        st.info(greeting)
     st.session_state.greeting_shown[mode] = True
     # Mark greeting as already rendered so top renderer shows it
     
