@@ -59,14 +59,14 @@ if mode == "Intelligent Document Querying Mode (RAG)":
     st.sidebar.markdown(f"**Embedding Model:** {embed_model['name']}")
     kb_folder = "./knowledge_base"
     st.sidebar.markdown(f"**Knowledge Base:** `{kb_folder}`")
-    
+
     # Use optimized RAG with pre-vectorization
     optimized_rag = get_optimized_rag()
     if "kb_initialized" not in st.session_state:
         with st.spinner("Initializing knowledge base..."):
             optimized_rag.initialize_knowledge_base(kb_folder, embed_model['id'])
             st.session_state.kb_initialized = True
-    
+
     # Show optimization stats
 #    with st.sidebar.expander(" Optimization Stats"):
 #        stats = optimized_rag.get_optimization_stats()
@@ -75,9 +75,9 @@ if mode == "Intelligent Document Querying Mode (RAG)":
 #        st.write("**Memory Store:**", stats["memory_store"])
 
 if mode == "Conversational Mode or RAG":
-    st.title("AI Assistant")
+    st.subheader("You can ask questions or upload a document to get started...")
 else:
-    st.title("SDQA AI Assistant")
+    st.subheader("Ask a question based on your knowledge base...")
 
 # Initialize history if not present
 if "mode_histories" not in st.session_state:
@@ -92,29 +92,6 @@ if "rendered_counts" not in st.session_state:
         "Conversational Mode or RAG": 0,
         "Intelligent Document Querying Mode (RAG)": 0
     }
-
-if "last_greeted_mode" not in st.session_state:
-    st.session_state.last_greeted_mode = None
-
-# Mode-specific greeting logic
-if "greeting_shown" not in st.session_state:
-    st.session_state.greeting_shown = {"Conversational Mode or RAG": False, "Intelligent Document Querying Mode (RAG)": False}
-
-if not st.session_state.greeting_shown[mode]:
-    if mode == "Conversational Mode or RAG":
-        greeting = "You can ask questions or upload a document to get started..."
-        st.info(greeting)
-    else:
-        greeting = "Ask a question based on your knowledge base..."
-        st.info(greeting)
-    st.session_state.greeting_shown[mode] = True
-    # Mark greeting as already rendered so top renderer shows it
-    
-    # Before rendering messages:
-    messages_to_render = [
-        msg for msg in st.session_state.mode_histories[mode]
-        if msg["content"] != greeting  # Filter out greeting
-    ]
 
 # Single chat container and placeholders for messages
 chat_container = st.container()
@@ -302,7 +279,7 @@ if user_input:
     else:
         embed_model = embedding_models[0]
         optimized_rag = get_optimized_rag()
-        
+
         # Append user message to history immediately and render placeholder
         current_history.append({"role": "user", "content": user_input})
         ph = chat_container.empty()
@@ -311,7 +288,7 @@ if user_input:
                 cp = st.empty()
                 cp.markdown(user_input)
                 placeholders.append(cp)
-        
+
         # Use streaming for RAG responses
         response_stream = optimized_rag.answer_with_optimization_stream(
             model_id=selected_chat_model['id'],
@@ -324,7 +301,7 @@ if user_input:
             store_memory=True,
             retrieve_past_contexts=True
         )
-        
+
         # Display streaming response in chat using a placeholder
         full_response = ""
         stats_data = None
@@ -341,18 +318,18 @@ if user_input:
                         full_response += token
                         stats_data = stats_update
                         assistant_cp.markdown(full_response)
-        
+
             response = full_response
 
         # Add assistant response to history (placeholder already has final content)
         current_history.append({"role": "assistant", "content": response})
-        
+
         # Display optimization stats after streaming completes
-#        if stats_data and not stats_data.get("cache_hit", False):
-#            if stats_data.get('optimization_source'):
-#                st.sidebar.success(f" Optimizations: {', '.join(stats_data['optimization_source'])}")
-#                if stats_data.get('tokens_saved', 0) > 0:
-#                    st.sidebar.info(f"[SAVED] Estimated tokens saved: {stats_data['tokens_saved']}")
+    #        if stats_data and not stats_data.get("cache_hit", False):
+    #            if stats_data.get('optimization_source'):
+    #                st.sidebar.success(f" Optimizations: {', '.join(stats_data['optimization_source'])}")
+    #                if stats_data.get('tokens_saved', 0) > 0:
+    #                    st.sidebar.info(f"[SAVED] Estimated tokens saved: {stats_data['tokens_saved']}")
 
     # For non-RAG modes, append to history normally unless streaming already handled it
     if not ( 'skip_generic_append' in locals() and skip_generic_append ):
